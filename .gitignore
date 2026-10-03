@@ -1,0 +1,5 @@
+auth_info_baileys/
+node_modules/
+
+registrations.xlsx  
+sent_log.json
