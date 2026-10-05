@@ -13,6 +13,7 @@ The script reads the latest registration `.xlsx` file, identifies participants w
 * Handles duplicate phone numbers within the same spreadsheet
 * Supports `--dry-run` for testing without sending messages
 * Supports `--limit=N` for controlled testing/batches
+* Supports `-m` / `--message` to print the exact message each person would receive
 * Shows the participants before sending
 * Requires confirmation before sending
 * Saves processing history immediately after each successful message
@@ -310,7 +311,59 @@ node script.js --dry-run --limit=3
 
 ---
 
-## 12. Duplicate phone numbers
+## 12. Previewing the message (`-m` / `--message`)
+
+To see the exact message a participant would receive without sending anything:
+
+```bash
+node script.js --message
+```
+
+The short form works too:
+
+```bash
+node script.js -m
+```
+
+For each queued participant the script prints the recipient and the full message body:
+
+```text
+--- Messages that would be sent ---
+
+────────────────────────────────────────────────────
+[1/2] To: Abhinav shetty — 919686043131
+────────────────────────────────────────────────────
+Hi Abhinav shetty!
+
+Thank you for registering for QuizWiz.
+
+Please join our official WhatsApp group for updates: https://chat.whatsapp.com/XXXXXXXX
+```
+
+Notes:
+
+* Nothing is sent and WhatsApp is never connected, so no QR code appears.
+* `sent_log.json` is not modified.
+* It prints messages for the participants in the queue only, so contacts already processed are skipped.
+* It respects `--limit`:
+
+```bash
+node script.js --message --limit=3
+```
+
+* The preview comes from the same message builder used when sending, so it always matches what goes out.
+
+To change the message text, edit `buildMessage()` in `script.js`:
+
+```js
+function buildMessage(Name) {
+    return `Hi ${Name}!\n\nThank you for registering for QuizWiz....`;
+}
+```
+
+---
+
+## 13. Duplicate phone numbers
 
 The script uses the normalized phone number as the unique identifier.
 
@@ -333,7 +386,7 @@ Likewise, these formats are normalized to the same number:
 
 ---
 
-## 13. Files that should stay local
+## 14. Files that should stay local
 
 The following files contain event-specific or private information:
 
@@ -358,7 +411,7 @@ The repository should contain the code and configuration, while each coordinator
 
 ---
 
-## 14. Normal workflow
+## 15. Normal workflow
 
 After the initial setup, the workflow is:
 
@@ -384,7 +437,7 @@ Repeat this whenever new registrations need to be processed.
 
 ---
 
-## 15. Setting up another event
+## 16. Setting up another event
 
 Each event coordinator can use the same GitHub repository.
 

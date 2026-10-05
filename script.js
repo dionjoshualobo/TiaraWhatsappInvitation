@@ -10,6 +10,7 @@ const GROUP_INVITE_LINK = "https://chat.whatsapp.com/Gg0aM16fKkBJvHwvlbUdKG";
 const REQUIRED_COLUMNS = ['Name', 'Email', 'College', 'Contact'];
 
 const isDryRun = process.argv.includes('--dry-run');
+const showMessages = process.argv.includes('--message') || process.argv.includes('-m');
 
 // 1. Strict --limit Validation
 const limitArg = process.argv.find(arg => arg.startsWith('--limit='));
@@ -24,7 +25,12 @@ if (limitArg) {
     limit = parsed;
 }
 
-// 2. Strict Indian Phone Normalization
+// 2. Message Composition
+function buildMessage(Name) {
+    return `Hi ${Name}!\n\nThank you for registering for QuizWiz.\n\nPlease join our official WhatsApp group for updates: ${GROUP_INVITE_LINK}\n\n\nAlso remember, every member of the team has to register individually at the event page on the Tiara website. Thank you!!!!`;
+}
+
+// 3. Strict Indian Phone Normalization
 function formatPhone(contactStr) {
     if (!contactStr) return null;
     let clean = String(contactStr).replace(/\D/g, '');
@@ -70,7 +76,7 @@ function saveHistory(history) {
     fs.writeFileSync(SENT_LOG_FILE, JSON.stringify(history, null, 2));
 }
 
-// 3. Offline Data Preparation & Diffing
+// 4. Offline Data Preparation & Diffing
 function prepareData() {
     if (!fs.existsSync(EXCEL_FILE)) {
         console.error(`Error: Could not find ${EXCEL_FILE}`);
@@ -136,6 +142,23 @@ function prepareData() {
     return { toProcess, history };
 }
 
+function printMessages(toProcess) {
+    const separator = '─'.repeat(52);
+
+    console.log('--- Messages that would be sent ---');
+
+    toProcess.forEach((p, index) => {
+        const number = p.jid.replace('@s.whatsapp.net', '');
+        console.log(`\n${separator}`);
+        console.log(`[${index + 1}/${toProcess.length}] To: ${p.Name} — ${number}`);
+        console.log(separator);
+        console.log(buildMessage(p.Name));
+    });
+
+    console.log(`\n${separator}`);
+    console.log('Preview only. No WhatsApp connection was opened and nothing was sent.');
+}
+
 function askConfirmation(message) {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -149,7 +172,7 @@ function askConfirmation(message) {
     });
 }
 
-// 4. WhatsApp Execution Loop
+// 5. WhatsApp Execution Loop
 async function runWhatsAppBot(toProcess, history) {
     console.log('Initializing WhatsApp connection...');
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -189,7 +212,7 @@ async function runWhatsAppBot(toProcess, history) {
                 const participant = toProcess[i];
                 const { jid, Name, Email, College, 'Team Name': Team } = participant;
                 
-                const messageText = `Hi ${Name}!\n\nThank you for registering for QuizWiz.\n\nPlease join our official WhatsApp group for updates: ${GROUP_INVITE_LINK}\n\n\nAlso remember, every member of the team has to register individually at the event page on the Tiara website. Thank you!!!!`;
+                const messageText = buildMessage(Name);
 
                 console.log(`[${i + 1}/${toProcess.length}] Sending invite to ${Name}...`);
 
@@ -222,7 +245,7 @@ async function runWhatsAppBot(toProcess, history) {
     });
 }
 
-// 5. Main Invocation
+// 6. Main Invocation
 async function main() {
     const { toProcess, history } = prepareData();
 
@@ -239,6 +262,11 @@ async function main() {
         );
     });
     console.log(`\nTotal: ${toProcess.length}\n`);
+
+    if (showMessages) {
+        printMessages(toProcess);
+        process.exit(0);
+    }
 
     if (isDryRun) {
         console.log("Dry run mode enabled. Run without --dry-run to execute.");
